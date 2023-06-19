@@ -1,0 +1,11 @@
+{
+  "name": "states",
+  "scripts": {
+    "serve": "esbuild --bundle --target=es2020 --sourcemap --outfile=states.js states.tsx --servedir=."
+  },
+  "dependencies": {
+    "esbuild": "^0.18.4",
+    "preact": "^10.15.1",
+    "typescript": "^5.1.3"
+  }
+}
