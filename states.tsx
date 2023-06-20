@@ -1,6 +1,6 @@
 import * as preact from 'preact';
 import { useState } from 'preact/hooks';
-import { signal } from "@preact/signals";
+import { Signal, signal, useComputed, useSignal, useSignalEffect } from "@preact/signals";
 
 interface Loc {
   region: string,
@@ -157,6 +157,7 @@ function showStat(loc: Loc, field: LocField): string {
   };
 }
 
+/** Table with verbose stats about the single selected location. */
 function Selected({ loc }: { loc: Loc }) {
   return <div>
     <table>
@@ -172,53 +173,57 @@ function Selected({ loc }: { loc: Loc }) {
   </div>;
 }
 
-function Combobox({ initial, options, commit }: { initial: string, options: string[], commit: (input: string) => void }) {
-  const [value, setValue] = useState(initial);
-  const [focus, setFocus] = useState(false);
+function Combobox({ text, options }: { text: Signal<string>, options: string[] }) {
+  const focus = useSignal(false);
 
-  function choose(val: string) { setValue(val); commit(val); }
-
+  let filteredOptions = useComputed(() => {
+    const filtered = options.filter(o => o !== text.value && o.toLowerCase().startsWith(text.value.toLowerCase()));
+    return filtered.slice(0, 5);
+  });
   let optionsDOM;
-  if (focus) {
-    options = options.filter(o => o !== value && o.toLowerCase().startsWith(value.toLowerCase())).slice(0, 5);
-    if (options.length > 0) {
+  if (focus.value) {
+    if (filteredOptions.value.length > 0) {
       optionsDOM = <div class='popup'>
-        {options.map(o => <div class='entry' onMouseDown={(e) => e.preventDefault()} onClick={() => choose(o)}>{o}</div>)}
+        {filteredOptions.value.map(o => <div class='entry'
+          onMouseDown={(e) => e.preventDefault()}  // prevent blur event
+          onClick={() => text.value = o}>{o}</div>)}
       </div>;
     }
   }
 
   return <div class='combo'>
-    <input type='text' value={value}
-      onFocus={() => setFocus(true)}
-      onBlur={() => setFocus(false)}
-      onInput={e => setValue((e.target as HTMLInputElement).value)}
+    <input type='text' value={text}
+      onFocus={() => focus.value = true}
+      onBlur={() => focus.value = false}
+      onInput={e => text.value = ((e.target as HTMLInputElement).value)}
       onKeyDown={e => {
-        if (e.key === 'Enter' && options.length > 0) {
-          choose(options[0]);
+        if (e.key === 'Enter' && filteredOptions.value.length > 0) {
+          text.value = filteredOptions.value[0];
         }
       }}
-      onChange={e => choose((e.target as HTMLInputElement).value)} />
+      onChange={e => text.value = (e.target as HTMLInputElement).value} />
     {optionsDOM}
   </div>;
 }
 
-function Picker({ loc, setLoc }: { loc: Loc | undefined, setLoc: (loc: Loc | undefined) => void }) {
-  const [locName, setLocName] = useState('');
+const allRegions = us.concat(eu).map(loc => loc.name).sort();
 
-  let cur = us.find((loc) => loc.name === locName);
-  if (!cur) {
-    cur = eu.find((loc) => loc.name === locName);
-  }
-  if (loc !== cur) setLoc(cur);
+function Picker({ loc }: { loc: Signal<Loc | undefined> }) {
+  const locName = useSignal('');
+  useSignalEffect(() => {
+    let cur = us.find((loc) => loc.name === locName.value);
+    if (!cur) {
+      cur = eu.find((loc) => loc.name === locName.value);
+    }
+    loc.value = cur;
+  });
 
   return <h2>
-    Region: <Combobox initial={loc?.name ?? ''} options={us.concat(eu).map(loc => loc.name)} commit={setLocName} />
+    Region: <Combobox text={locName} options={allRegions} />
   </h2>;
 }
 
-
-function Comparables({ src, top, axis, setAxis }: { src: Loc, top: Loc[], axis: LocField, setAxis: (f: LocField) => void }) {
+function Comparables({ src, top, axis }: { src: Loc, top: Loc[], axis: Signal<LocField> }) {
   function row(loc: Loc) {
     return <tr>
       <td>{loc.name}</td>
@@ -230,7 +235,7 @@ function Comparables({ src, top, axis, setAxis }: { src: Loc, top: Loc[], axis: 
 
   return <div>
     <h2>Comparables, by{' '}
-      <select value={axis} onChange={e => setAxis((e.target as HTMLSelectElement).value as LocField)}>
+      <select value={axis} onChange={e => axis.value = ((e.target as HTMLSelectElement).value as LocField)}>
         <option value='gdp'>GDP</option>
         <option value='land'>Land</option>
         <option value='pop'>Population</option>
@@ -248,13 +253,22 @@ function Comparables({ src, top, axis, setAxis }: { src: Loc, top: Loc[], axis: 
   </div>;
 }
 
-function UI() {
-  const [loc, setLoc] = useState<Loc | undefined>(undefined);
-  const [axis, setAxis] = useState<LocField>('gdp');
+function Location({ loc, axis }: { loc: Signal<Loc>, axis: Signal<LocField> }) {
+  const top = useComputed(() =>
+    match(loc.value, axis.value, loc.value.region === 'us' ? eu : us)
+  );
   return <div>
-    <Picker loc={loc} setLoc={setLoc} />
-    {loc ? <Selected loc={loc} /> : null}
-    {loc ? <Comparables src={loc} top={match(loc, axis, loc.region === 'us' ? eu : us)} axis={axis} setAxis={setAxis} /> : null}
+    <Selected loc={loc.value!} />
+    <Comparables src={loc.value!} top={top.value} axis={axis} />
+  </div>;
+}
+
+function UI() {
+  const loc = useSignal<Loc | undefined>(undefined);
+  const axis = useSignal<LocField>('gdp');
+  return <div>
+    <Picker loc={loc} />
+    {loc.value ? <Location loc={loc as Signal<Loc>} axis={axis} /> : null}
   </div>;
 }
 
