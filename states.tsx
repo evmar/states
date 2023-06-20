@@ -1,5 +1,4 @@
 import * as preact from 'preact';
-import { useState } from 'preact/hooks';
 import { Signal, signal, useComputed, useSignal, useSignalEffect } from "@preact/signals";
 
 interface Loc {

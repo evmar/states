@@ -1,7 +1,8 @@
 {
   "name": "states",
   "scripts": {
-    "serve": "esbuild --bundle --target=es2020 --sourcemap --outfile=states.js states.tsx --servedir=."
+    "serve": "esbuild --bundle --target=es2020 --sourcemap --outfile=states.js states.tsx --servedir=.",
+    "bundle": "esbuild --bundle --target=es2020 --sourcemap --outfile=states.js states.tsx"
   },
   "dependencies": {
     "@preact/signals": "^1.1.3",
