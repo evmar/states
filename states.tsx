@@ -1,5 +1,6 @@
 import * as preact from 'preact';
 import { useState } from 'preact/hooks';
+import { signal } from "@preact/signals";
 
 interface Loc {
   region: string,
@@ -11,6 +12,7 @@ interface Loc {
 
 type LocField = 'gdp' | 'land' | 'pop';
 type LandUnit = 'mi' | 'km';
+const landUnit = signal<LandUnit>('mi');
 
 function parse(region: string, tsv: string): Loc[] {
   return tsv.split('\n').map(line => {
@@ -142,12 +144,12 @@ function relPct(a: number, b: number) {
   return <small>{str}</small>;
 }
 
-function showStat(loc: Loc, field: LocField, landUnit: LandUnit): string {
+function showStat(loc: Loc, field: LocField): string {
   switch (field) {
     case 'gdp': return `${(loc.gdp / 1000).toFixed(1)}`;
     case 'land': {
       let land = loc.land;
-      if (landUnit == 'km') land *= 2.59;
+      if (landUnit.value == 'km') land *= 2.59;
       land /= 1000;
       return `${land.toFixed(0)}k`;
     }
@@ -155,17 +157,17 @@ function showStat(loc: Loc, field: LocField, landUnit: LandUnit): string {
   };
 }
 
-function Selected({ loc, landUnit, setLandUnit }: { loc: Loc, landUnit: LandUnit, setLandUnit: (l: LandUnit) => void }) {
+function Selected({ loc }: { loc: Loc }) {
   return <div>
     <table>
-      <tr><td class='r'>GDP:</td><td>${showStat(loc, 'gdp', landUnit)} billion USD</td></tr>
-      <tr><td class='r'>Land:</td><td>{showStat(loc, 'land', landUnit)}&nbsp;
-        <select value={landUnit} onChange={e => setLandUnit((e.target as HTMLOptionElement).value as LandUnit)}>
+      <tr><td class='r'>GDP:</td><td>${showStat(loc, 'gdp')} billion USD</td></tr>
+      <tr><td class='r'>Land:</td><td>{showStat(loc, 'land')}&nbsp;
+        <select value={landUnit} onChange={e => landUnit.value = ((e.target as HTMLOptionElement).value as LandUnit)}>
           <option value='mi'>sq mi</option>
           <option value='km'>sq km</option>
         </select>
       </td></tr>
-      <tr><td class='r'>Population:</td><td>{showStat(loc, 'pop', landUnit)} million</td></tr>
+      <tr><td class='r'>Population:</td><td>{showStat(loc, 'pop')} million</td></tr>
     </table>
   </div>;
 }
@@ -216,13 +218,13 @@ function Picker({ loc, setLoc }: { loc: Loc | undefined, setLoc: (loc: Loc | und
 }
 
 
-function Comparables({ src, top, landUnit, axis, setAxis }: { src: Loc, top: Loc[], landUnit: LandUnit, axis: LocField, setAxis: (f: LocField) => void }) {
+function Comparables({ src, top, axis, setAxis }: { src: Loc, top: Loc[], axis: LocField, setAxis: (f: LocField) => void }) {
   function row(loc: Loc) {
     return <tr>
       <td>{loc.name}</td>
-      <td class='r'>{showStat(loc, 'gdp', landUnit)}</td> <td class='r'>{relPct(src.gdp, loc.gdp)}</td>
-      <td class='r'>{showStat(loc, 'land', landUnit)}</td><td class='r'>{relPct(src.land, loc.land)}</td>
-      <td class='r'>{showStat(loc, 'pop', landUnit)}</td> <td class='r'>{relPct(src.pop, loc.pop)}</td>
+      <td class='r'>{showStat(loc, 'gdp')}</td> <td class='r'>{relPct(src.gdp, loc.gdp)}</td>
+      <td class='r'>{showStat(loc, 'land')}</td><td class='r'>{relPct(src.land, loc.land)}</td>
+      <td class='r'>{showStat(loc, 'pop')}</td> <td class='r'>{relPct(src.pop, loc.pop)}</td>
     </tr>;
   }
 
@@ -248,12 +250,11 @@ function Comparables({ src, top, landUnit, axis, setAxis }: { src: Loc, top: Loc
 
 function UI() {
   const [loc, setLoc] = useState<Loc | undefined>(undefined);
-  const [landUnit, setLandUnit] = useState<LandUnit>('mi');
   const [axis, setAxis] = useState<LocField>('gdp');
   return <div>
     <Picker loc={loc} setLoc={setLoc} />
-    {loc ? <Selected loc={loc} landUnit={landUnit} setLandUnit={setLandUnit} /> : null}
-    {loc ? <Comparables src={loc} top={match(loc, axis, loc.region === 'us' ? eu : us)} landUnit={landUnit} axis={axis} setAxis={setAxis} /> : null}
+    {loc ? <Selected loc={loc} /> : null}
+    {loc ? <Comparables src={loc} top={match(loc, axis, loc.region === 'us' ? eu : us)} axis={axis} setAxis={setAxis} /> : null}
   </div>;
 }
 
