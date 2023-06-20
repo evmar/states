@@ -148,7 +148,8 @@ function showStat(loc: Loc, field: LocField, landUnit: LandUnit): string {
     case 'land': {
       let land = loc.land;
       if (landUnit == 'km') land *= 2.59;
-      return `${land.toFixed(0)}`;
+      land /= 1000;
+      return `${land.toFixed(0)}k`;
     }
     case 'pop': return `${(loc.pop / 1_000_000).toFixed(1)}`;
   };
@@ -169,8 +170,39 @@ function Selected({ loc, landUnit, setLandUnit }: { loc: Loc, landUnit: LandUnit
   </div>;
 }
 
+function Combobox({ initial, options, commit }: { initial: string, options: string[], commit: (input: string) => void }) {
+  const [value, setValue] = useState(initial);
+  const [focus, setFocus] = useState(false);
+
+  function choose(val: string) { setValue(val); commit(val); }
+
+  let optionsDOM;
+  if (focus) {
+    options = options.filter(o => o !== value && o.toLowerCase().startsWith(value.toLowerCase())).slice(0, 5);
+    if (options.length > 0) {
+      optionsDOM = <div class='popup'>
+        {options.map(o => <div class='entry' onMouseDown={(e) => e.preventDefault()} onClick={() => choose(o)}>{o}</div>)}
+      </div>;
+    }
+  }
+
+  return <div class='combo'>
+    <input type='text' value={value}
+      onFocus={() => setFocus(true)}
+      onBlur={() => setFocus(false)}
+      onInput={e => setValue((e.target as HTMLInputElement).value)}
+      onKeyDown={e => {
+        if (e.key === 'Enter' && options.length > 0) {
+          choose(options[0]);
+        }
+      }}
+      onChange={e => choose((e.target as HTMLInputElement).value)} />
+    {optionsDOM}
+  </div>;
+}
+
 function Picker({ loc, setLoc }: { loc: Loc | undefined, setLoc: (loc: Loc | undefined) => void }) {
-  const [locName, setLocName] = useState('Oregon');
+  const [locName, setLocName] = useState('');
 
   let cur = us.find((loc) => loc.name === locName);
   if (!cur) {
@@ -179,7 +211,7 @@ function Picker({ loc, setLoc }: { loc: Loc | undefined, setLoc: (loc: Loc | und
   if (loc !== cur) setLoc(cur);
 
   return <h2>
-    Region: <input type='text' value={locName} onChange={e => setLocName((e.target as HTMLInputElement).value)} />
+    Region: <Combobox initial={loc?.name ?? ''} options={us.concat(eu).map(loc => loc.name)} commit={setLocName} />
   </h2>;
 }
 
@@ -202,12 +234,12 @@ function Comparables({ src, top, landUnit, axis, setAxis }: { src: Loc, top: Loc
         <option value='pop'>Population</option>
       </select>
     </h2>
-    <table>
+    <table width='100%'>
       <tr>
         <th></th>
         <th colSpan={2}>GDP ($b USD)</th>
         <th colSpan={2}>Land (sq {landUnit})</th>
-        <th colSpan={2}>Population (m)</th>
+        <th colSpan={2}>Pop (m)</th>
       </tr>
       {top.map(row)}
     </table>
