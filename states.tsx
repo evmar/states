@@ -264,7 +264,7 @@ function Comparables({ src, top, axis }: { src: Loc, top: Loc[], axis: Signal<Lo
     <table width='100%'>
       <tr>
         <th></th>
-        <th colSpan={2}>GDP ($)</th>
+        <th colSpan={2}>GDP (${gdpUnit.value === '' ? '' : '/person'})</th>
         <th colSpan={2}>Land (sq {landUnit})</th>
         <th colSpan={2}>Pop (m)</th>
       </tr>
