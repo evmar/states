@@ -5,6 +5,7 @@ interface Loc {
   region: string,
   name: string;
   gdp: number;
+  gdpPerCapita: number;
   land: number;
   pop: number;
 }
@@ -13,10 +14,20 @@ type LocField = 'gdp' | 'land' | 'pop';
 type LandUnit = 'mi' | 'km';
 const landUnit = signal<LandUnit>('mi');
 
-function parse(region: string, tsv: string): Loc[] {
+const gdpUnit = signal<'' | 'per capita'>('');
+
+function parse(region: 'us' | 'eu', tsv: string): Loc[] {
   return tsv.split('\n').map(line => {
-    const [name, gdp, land, pop] = line.split('\t');
-    return { region, name, gdp: parseFloat(gdp), land: parseFloat(land), pop: parseFloat(pop) };
+    const [name, gdpStr, landStr, popStr] = line.split('\t');
+    let gdp = parseFloat(gdpStr);
+    let land = parseFloat(landStr);
+    const pop = parseFloat(popStr);
+    if (region === 'eu') {
+      gdp *= 1000;  // normalize to $m
+      land /= 2.59;  // normalize to sqmi
+    }
+    const gdpPerCapita = gdp / pop;
+    return { region, name, gdp, gdpPerCapita, land, pop };
   });
 }
 
@@ -120,12 +131,8 @@ Andorra	3.669	468	79034
 San Marino	1.807	61	33745
 Liechtenstein		160	39039
 Monaco		2	36686`);
-for (const country of eu) {
-  country.gdp *= 1000;  // normalize to $m
-  country.land /= 2.59;  // normalize to sqmi
-}
 
-function match(src: Loc, field: LocField, dsts: Loc[]) {
+function match(src: Loc, field: LocField | 'gdpPerCapita', dsts: Loc[]) {
   const dists = dsts.map((dst, i) => {
     const dist = dst[field] - src[field];
     return { i, dist };
@@ -145,10 +152,16 @@ function relPct(a: number, b: number) {
 
 function showStat(loc: Loc, field: LocField): string {
   switch (field) {
-    case 'gdp': return `${(loc.gdp / 1000).toFixed(1)}`;
+    case 'gdp': {
+      if (gdpUnit.value === 'per capita') {
+        return `${(loc.gdpPerCapita * 1000).toFixed(1)}k`;
+      } else {
+        return `${(loc.gdp / 1000).toFixed(1)}b`;
+      }
+    }
     case 'land': {
       let land = loc.land;
-      if (landUnit.value == 'km') land *= 2.59;
+      if (landUnit.value === 'km') land *= 2.59;
       land /= 1000;
       return `${land.toFixed(0)}k`;
     }
@@ -160,7 +173,12 @@ function showStat(loc: Loc, field: LocField): string {
 function Selected({ loc }: { loc: Loc }) {
   return <div>
     <table>
-      <tr><td class='r'>GDP:</td><td>${showStat(loc, 'gdp')} billion USD</td></tr>
+      <tr><td class='r'>GDP:</td><td>${showStat(loc, 'gdp')} USD&nbsp;
+        <select value={gdpUnit} onChange={e => gdpUnit.value = ((e.target as HTMLOptionElement).value as ('' | 'per capita'))}>
+          <option value=''></option>
+          <option value='per capita'>per capita</option>
+        </select>
+      </td></tr>
       <tr><td class='r'>Land:</td><td>{showStat(loc, 'land')}&nbsp;
         <select value={landUnit} onChange={e => landUnit.value = ((e.target as HTMLOptionElement).value as LandUnit)}>
           <option value='mi'>sq mi</option>
@@ -226,9 +244,12 @@ function Comparables({ src, top, axis }: { src: Loc, top: Loc[], axis: Signal<Lo
   function row(loc: Loc) {
     return <tr>
       <td>{loc.name}</td>
-      <td class='r'>{showStat(loc, 'gdp')}</td> <td class='r'>{relPct(src.gdp, loc.gdp)}</td>
-      <td class='r'>{showStat(loc, 'land')}</td><td class='r'>{relPct(src.land, loc.land)}</td>
-      <td class='r'>{showStat(loc, 'pop')}</td> <td class='r'>{relPct(src.pop, loc.pop)}</td>
+      <td class='r'>{showStat(loc, 'gdp')}</td>
+      <td class='r'>{gdpUnit.value === '' ? relPct(src.gdp, loc.gdp) : relPct(src.gdpPerCapita, loc.gdpPerCapita)}</td>
+      <td class='r'>{showStat(loc, 'land')}</td>
+      <td class='r'>{relPct(src.land, loc.land)}</td>
+      <td class='r'>{showStat(loc, 'pop')}</td>
+      <td class='r'>{relPct(src.pop, loc.pop)}</td>
     </tr>;
   }
 
@@ -243,7 +264,7 @@ function Comparables({ src, top, axis }: { src: Loc, top: Loc[], axis: Signal<Lo
     <table width='100%'>
       <tr>
         <th></th>
-        <th colSpan={2}>GDP ($b USD)</th>
+        <th colSpan={2}>GDP ($)</th>
         <th colSpan={2}>Land (sq {landUnit})</th>
         <th colSpan={2}>Pop (m)</th>
       </tr>
@@ -253,9 +274,13 @@ function Comparables({ src, top, axis }: { src: Loc, top: Loc[], axis: Signal<Lo
 }
 
 function Location({ loc, axis }: { loc: Signal<Loc>, axis: Signal<LocField> }) {
-  const top = useComputed(() =>
-    match(loc.value, axis.value, loc.value.region === 'us' ? eu : us)
-  );
+  const top = useComputed(() => {
+    let field: LocField | 'gdpPerCapita' = axis.value;
+    if (field === 'gdp' && gdpUnit.value === 'per capita') {
+      field = 'gdpPerCapita';
+    }
+    return match(loc.value, field, loc.value.region === 'us' ? eu : us);
+  });
   return <div>
     <Selected loc={loc.value!} />
     <Comparables src={loc.value!} top={top.value} axis={axis} />
