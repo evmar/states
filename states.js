@@ -1247,7 +1247,11 @@ Monaco	6.817	2	36686`);
       /* @__PURE__ */ o4("table", { width: "100%", children: [
         /* @__PURE__ */ o4("tr", { children: [
           /* @__PURE__ */ o4("th", {}),
-          /* @__PURE__ */ o4("th", { colSpan: 2, children: "GDP ($)" }),
+          /* @__PURE__ */ o4("th", { colSpan: 2, children: [
+            "GDP ($",
+            gdpUnit.value === "" ? "" : "/person",
+            ")"
+          ] }),
           /* @__PURE__ */ o4("th", { colSpan: 2, children: [
             "Land (sq ",
             landUnit,
