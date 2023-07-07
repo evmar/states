@@ -982,10 +982,19 @@
 
   // states.tsx
   var landUnit = u3("mi");
+  var gdpUnit = u3("");
   function parse(region, tsv) {
     return tsv.split("\n").map((line) => {
-      const [name, gdp, land, pop] = line.split("	");
-      return { region, name, gdp: parseFloat(gdp), land: parseFloat(land), pop: parseFloat(pop) };
+      const [name, gdpStr, landStr, popStr] = line.split("	");
+      let gdp = parseFloat(gdpStr);
+      let land = parseFloat(landStr);
+      const pop = parseFloat(popStr);
+      if (region === "eu") {
+        gdp *= 1e3;
+        land /= 2.59;
+      }
+      const gdpPerCapita = gdp / pop;
+      return { region, name, gdp, gdpPerCapita, land, pop };
     });
   }
   var us = parse("us", `California	3598103	163694.74	39029342
@@ -1085,12 +1094,8 @@ Kosovo	9.990		1662009
 Montenegro	7.027	13812	627859
 Andorra	3.669	468	79034
 San Marino	1.807	61	33745
-Liechtenstein		160	39039
-Monaco		2	36686`);
-  for (const country of eu) {
-    country.gdp *= 1e3;
-    country.land /= 2.59;
-  }
+Liechtenstein	6.872	160	39039
+Monaco	6.817	2	36686`);
   function match(src, field, dsts) {
     const dists = dsts.map((dst, i4) => {
       const dist = dst[field] - src[field];
@@ -1109,11 +1114,16 @@ Monaco		2	36686`);
   }
   function showStat(loc, field) {
     switch (field) {
-      case "gdp":
-        return `${(loc.gdp / 1e3).toFixed(1)}`;
+      case "gdp": {
+        if (gdpUnit.value === "per capita") {
+          return `${(loc.gdpPerCapita * 1e3).toFixed(1)}k`;
+        } else {
+          return `${(loc.gdp / 1e3).toFixed(1)}b`;
+        }
+      }
       case "land": {
         let land = loc.land;
-        if (landUnit.value == "km")
+        if (landUnit.value === "km")
           land *= 2.59;
         land /= 1e3;
         return `${land.toFixed(0)}k`;
@@ -1130,7 +1140,11 @@ Monaco		2	36686`);
         /* @__PURE__ */ o4("td", { children: [
           "$",
           showStat(loc, "gdp"),
-          " billion USD"
+          " USD\xA0",
+          /* @__PURE__ */ o4("select", { value: gdpUnit, onChange: (e4) => gdpUnit.value = e4.target.value, children: [
+            /* @__PURE__ */ o4("option", { value: "" }),
+            /* @__PURE__ */ o4("option", { value: "per capita", children: "per capita" })
+          ] })
         ] })
       ] }),
       /* @__PURE__ */ o4("tr", { children: [
@@ -1213,12 +1227,10 @@ Monaco		2	36686`);
       return /* @__PURE__ */ o4("tr", { children: [
         /* @__PURE__ */ o4("td", { children: loc.name }),
         /* @__PURE__ */ o4("td", { class: "r", children: showStat(loc, "gdp") }),
-        " ",
-        /* @__PURE__ */ o4("td", { class: "r", children: relPct(src.gdp, loc.gdp) }),
+        /* @__PURE__ */ o4("td", { class: "r", children: gdpUnit.value === "" ? relPct(src.gdp, loc.gdp) : relPct(src.gdpPerCapita, loc.gdpPerCapita) }),
         /* @__PURE__ */ o4("td", { class: "r", children: showStat(loc, "land") }),
         /* @__PURE__ */ o4("td", { class: "r", children: relPct(src.land, loc.land) }),
         /* @__PURE__ */ o4("td", { class: "r", children: showStat(loc, "pop") }),
-        " ",
         /* @__PURE__ */ o4("td", { class: "r", children: relPct(src.pop, loc.pop) })
       ] });
     }
@@ -1235,7 +1247,7 @@ Monaco		2	36686`);
       /* @__PURE__ */ o4("table", { width: "100%", children: [
         /* @__PURE__ */ o4("tr", { children: [
           /* @__PURE__ */ o4("th", {}),
-          /* @__PURE__ */ o4("th", { colSpan: 2, children: "GDP ($b USD)" }),
+          /* @__PURE__ */ o4("th", { colSpan: 2, children: "GDP ($)" }),
           /* @__PURE__ */ o4("th", { colSpan: 2, children: [
             "Land (sq ",
             landUnit,
@@ -1248,9 +1260,13 @@ Monaco		2	36686`);
     ] });
   }
   function Location({ loc, axis }) {
-    const top = useComputed(
-      () => match(loc.value, axis.value, loc.value.region === "us" ? eu : us)
-    );
+    const top = useComputed(() => {
+      let field = axis.value;
+      if (field === "gdp" && gdpUnit.value === "per capita") {
+        field = "gdpPerCapita";
+      }
+      return match(loc.value, field, loc.value.region === "us" ? eu : us);
+    });
     return /* @__PURE__ */ o4("div", { children: [
       /* @__PURE__ */ o4(Selected, { loc: loc.value }),
       /* @__PURE__ */ o4(Comparables, { src: loc.value, top: top.value, axis })
