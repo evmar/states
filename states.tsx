@@ -129,8 +129,8 @@ Kosovo	9.990		1662009
 Montenegro	7.027	13812	627859
 Andorra	3.669	468	79034
 San Marino	1.807	61	33745
-Liechtenstein		160	39039
-Monaco		2	36686`);
+Liechtenstein	6.872	160	39039
+Monaco	6.817	2	36686`);
 
 function match(src: Loc, field: LocField | 'gdpPerCapita', dsts: Loc[]) {
   const dists = dsts.map((dst, i) => {
