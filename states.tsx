@@ -41,7 +41,10 @@ function match(src: Loc, field: LocField | "gdpPerCapita", dsts: Loc[]) {
     return { i, dist };
   });
   dists.sort((a, b) => Math.abs(a.dist) - Math.abs(b.dist));
-  return dists.slice(0, 5).map(({ i }) => dsts[i]);
+  const locs = dists.slice(0, 7).map(({ i }) => dsts[i]);
+  locs.push(src);
+  locs.sort((a, b) => a[field] - b[field]);
+  return locs;
 }
 
 function relPct(a: number, b: number) {
@@ -213,14 +216,16 @@ function Comparables({
         <td>{loc.name}</td>
         <td class="r">{showStat(loc, "gdp")}</td>
         <td class="r">
-          {gdpUnit.value === ""
-            ? relPct(src.gdp, loc.gdp)
-            : relPct(src.gdpPerCapita, loc.gdpPerCapita)}
+          {src !== loc
+            ? gdpUnit.value === ""
+              ? relPct(src.gdp, loc.gdp)
+              : relPct(src.gdpPerCapita, loc.gdpPerCapita)
+            : null}
         </td>
         <td class="r">{showStat(loc, "land")}</td>
-        <td class="r">{relPct(src.land, loc.land)}</td>
+        <td class="r">{src !== loc && relPct(src.land, loc.land)}</td>
         <td class="r">{showStat(loc, "pop")}</td>
-        <td class="r">{relPct(src.pop, loc.pop)}</td>
+        <td class="r">{src !== loc && relPct(src.pop, loc.pop)}</td>
       </tr>
     );
   }
