@@ -82,23 +82,6 @@ function Selected({ loc }: { loc: Loc }) {
     <div>
       <table>
         <tr>
-          <td class="r">GDP:</td>
-          <td>
-            ${showStat(loc, "gdp")} USD&nbsp;
-            <select
-              value={gdpUnit}
-              onChange={(e) =>
-                (gdpUnit.value = (e.target as HTMLOptionElement).value as
-                  | ""
-                  | "per capita")
-              }
-            >
-              <option value=""></option>
-              <option value="per capita">per capita</option>
-            </select>
-          </td>
-        </tr>
-        <tr>
           <td class="r">Land:</td>
           <td>
             {showStat(loc, "land")}&nbsp;
@@ -118,6 +101,23 @@ function Selected({ loc }: { loc: Loc }) {
           <td class="r">Population:</td>
           <td>{showStat(loc, "pop")} million</td>
         </tr>
+        <tr>
+          <td class="r">GDP:</td>
+          <td>
+            ${showStat(loc, "gdp")} USD&nbsp;
+            <select
+              value={gdpUnit}
+              onChange={(e) =>
+                (gdpUnit.value = (e.target as HTMLOptionElement).value as
+                  | ""
+                  | "per capita")
+              }
+            >
+              <option value=""></option>
+              <option value="per capita">per capita</option>
+            </select>
+          </td>
+        </tr>{" "}
       </table>
     </div>
   );
@@ -214,6 +214,10 @@ function Comparables({
     return (
       <tr>
         <td>{loc.name}</td>
+        <td class="r">{showStat(loc, "land")}</td>
+        <td class="r">{src !== loc && relPct(src.land, loc.land)}</td>
+        <td class="r">{showStat(loc, "pop")}</td>
+        <td class="r">{src !== loc && relPct(src.pop, loc.pop)}</td>
         <td class="r">{showStat(loc, "gdp")}</td>
         <td class="r">
           {src !== loc
@@ -221,11 +225,7 @@ function Comparables({
               ? relPct(src.gdp, loc.gdp)
               : relPct(src.gdpPerCapita, loc.gdpPerCapita)
             : null}
-        </td>
-        <td class="r">{showStat(loc, "land")}</td>
-        <td class="r">{src !== loc && relPct(src.land, loc.land)}</td>
-        <td class="r">{showStat(loc, "pop")}</td>
-        <td class="r">{src !== loc && relPct(src.pop, loc.pop)}</td>
+        </td>{" "}
       </tr>
     );
   }
@@ -240,17 +240,17 @@ function Comparables({
             (axis.value = (e.target as HTMLSelectElement).value as LocField)
           }
         >
-          <option value="gdp">GDP</option>
           <option value="land">Land</option>
           <option value="pop">Population</option>
+          <option value="gdp">GDP</option>
         </select>
       </h2>
       <table width="100%">
         <tr>
           <th></th>
-          <th colSpan={2}>GDP (${gdpUnit.value === "" ? "" : "/person"})</th>
           <th colSpan={2}>Land (sq {landUnit})</th>
           <th colSpan={2}>Pop (m)</th>
+          <th colSpan={2}>GDP (${gdpUnit.value === "" ? "" : "/person"})</th>
         </tr>
         {top.map(row)}
       </table>
@@ -276,7 +276,7 @@ function Location({ loc, axis }: { loc: Signal<Loc>; axis: Signal<LocField> }) {
 
 function UI() {
   const loc = useSignal<Loc | undefined>(undefined);
-  const axis = useSignal<LocField>("gdp");
+  const axis = useSignal<LocField>("land");
   return (
     <div>
       <Picker loc={loc} />
