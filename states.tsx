@@ -69,11 +69,18 @@ function showStat(loc: Loc, field: LocField): string {
     case "land": {
       let land = loc.land;
       if (landUnit.value === "mi") land /= 2.59;
-      land /= 1000;
-      return `${land.toFixed(0)}k`;
+      if (land > 1000) {
+        return `${(land / 1000).toFixed(0)}k`;
+      } else {
+        return `${land.toFixed(0)}`;
+      }
     }
     case "pop":
-      return `${(loc.pop / 1_000_000).toFixed(1)}`;
+      if (loc.pop > 500_000) {
+        return `${(loc.pop / 1_000_000).toFixed(1)}m`;
+      } else {
+        return `${(loc.pop / 1_000).toFixed(0)}k`;
+      }
     case "hdi":
       return `${loc.hdi.toFixed(3)}`;
   }
@@ -102,7 +109,7 @@ function Selected({ loc }: { loc: Loc }) {
         </tr>
         <tr>
           <td class="r">Population:</td>
-          <td>{showStat(loc, "pop")} million</td>
+          <td>{showStat(loc, "pop")}</td>
         </tr>
         <tr>
           <td class="r">GDP:</td>
@@ -258,7 +265,7 @@ function Comparables({
         <tr>
           <th></th>
           <th colSpan={2}>Land (sq {landUnit})</th>
-          <th colSpan={2}>Pop (m)</th>
+          <th colSpan={2}>Population</th>
           <th colSpan={2}>GDP (${gdpUnit.value === "" ? "" : "/person"})</th>
           <th colSpan={2}>HDI</th>
         </tr>
