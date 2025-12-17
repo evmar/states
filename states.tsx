@@ -15,9 +15,10 @@ interface Loc {
   gdpPerCapita: number;
   land: number;
   pop: number;
+  hdi: number;
 }
 
-type LocField = "gdp" | "land" | "pop";
+type LocField = "gdp" | "land" | "pop" | "hdi";
 type LandUnit = "mi" | "km";
 const landUnit = signal<LandUnit>("mi");
 
@@ -25,11 +26,11 @@ const gdpUnit = signal<"" | "per capita">("");
 
 function load(
   region: "us" | "eu",
-  data: Array<[string, number, number, number]>,
+  data: Array<[string, number, number, number, number]>,
 ): Loc[] {
-  return data.map(([name, gdp, land, pop]) => {
+  return data.map(([name, gdp, land, pop, hdi]) => {
     const gdpPerCapita = gdp / pop;
-    return { region, name, gdp, gdpPerCapita, land, pop };
+    return { region, name, gdp, gdpPerCapita, land, pop, hdi };
   });
 }
 const us = load("us", data["us"] as any);
@@ -73,6 +74,8 @@ function showStat(loc: Loc, field: LocField): string {
     }
     case "pop":
       return `${(loc.pop / 1_000_000).toFixed(1)}`;
+    case "hdi":
+      return `${loc.hdi.toFixed(3)}`;
   }
 }
 
@@ -117,7 +120,11 @@ function Selected({ loc }: { loc: Loc }) {
               <option value="per capita">per capita</option>
             </select>
           </td>
-        </tr>{" "}
+        </tr>
+        <tr>
+          <td class="r">HDI:</td>
+          <td>{showStat(loc, "hdi")}</td>
+        </tr>
       </table>
     </div>
   );
@@ -225,7 +232,8 @@ function Comparables({
               ? relPct(src.gdp, loc.gdp)
               : relPct(src.gdpPerCapita, loc.gdpPerCapita)
             : null}
-        </td>{" "}
+        </td>
+        <td class="r">{showStat(loc, "hdi")}</td>
       </tr>
     );
   }
@@ -243,6 +251,7 @@ function Comparables({
           <option value="land">Land</option>
           <option value="pop">Population</option>
           <option value="gdp">GDP</option>
+          <option value="hdi">HDI</option>
         </select>
       </h2>
       <table width="100%">
@@ -251,6 +260,7 @@ function Comparables({
           <th colSpan={2}>Land (sq {landUnit})</th>
           <th colSpan={2}>Pop (m)</th>
           <th colSpan={2}>GDP (${gdpUnit.value === "" ? "" : "/person"})</th>
+          <th colSpan={2}>HDI</th>
         </tr>
         {top.map(row)}
       </table>
